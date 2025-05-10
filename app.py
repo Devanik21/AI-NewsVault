@@ -1,79 +1,63 @@
 import streamlit as st
-import requests
 import google.generativeai as genai
 
-# Set your API keys
-NEWS_API_KEY = "your_news_api_key_here"
-GEMINI_API_KEY = "your_gemini_api_key_here"
+# ---------------- Sidebar ----------------
+st.sidebar.title("🔑 Gemini API Key")
+gemini_key = st.sidebar.text_input("Enter your Gemini API Key", type="password")
 
 # Initialize Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-pro")
+if gemini_key:
+    genai.configure(api_key=gemini_key)
+    gemini_model = genai.GenerativeModel("gemini-2.0-flash")
+else:
+    gemini_model = None
 
-# Genre choices
-GENRES = {
-    "Top Headlines": "general",
-    "Technology": "technology",
-    "Science": "science",
-    "Health": "health",
-    "Business": "business",
-    "Entertainment": "entertainment",
-    "Sports": "sports"
-}
+# -------------- Genre Choices --------------
+GENRES = [
+    "World",
+    "Technology",
+    "Science",
+    "Health",
+    "Business",
+    "Entertainment",
+    "Sports",
+    "Politics",
+    "Environment",
+    "Education"
+]
 
-# Streamlit UI
-st.set_page_config(page_title="🗞️ AI News Summarizer", layout="wide")
-st.title("🗞️ AI News Summarizer")
-st.markdown("Stay updated with **real-time news** and get quick summaries powered by **Gemini**!")
+# -------------- App UI ------------------
+st.set_page_config(page_title="🗞️ AI News Generator", layout="wide")
+st.title("🗞️ AI News Generator")
+st.markdown("Generate the **latest news summaries** using real-time data from Gemini 2.0 Flash ✨")
 
-# Genre selection
-genre = st.selectbox("Choose a news category", list(GENRES.keys()))
+genre = st.selectbox("Choose a news category", GENRES)
+user_query = st.text_input("🧠 Want something specific? Ask your own query:")
+
 st.markdown("---")
 
-# Fetch news from NewsAPI
-def fetch_news(category):
-    url = f"https://newsapi.org/v2/top-headlines?country=us&category={category}&apiKey={NEWS_API_KEY}"
-    response = requests.get(url)
-    return response.json().get("articles", [])
+# -------------- Gemini News Generator --------------
+def generate_news(genre=None, custom_query=None):
+    if not gemini_model:
+        return "❌ Gemini API key not provided."
 
-# Generate Gemini summary
-def summarize_with_gemini(text, mode="normal"):
-    if mode == "normal":
-        prompt = f"Summarize the following news article:\n\n{text}"
+    if custom_query:
+        prompt = f"Get the latest news and summarize it on: {custom_query}"
     else:
-        prompt = f"Explain the following news article like I'm 5 years old:\n\n{text}"
+        prompt = f"Provide a brief and latest news summary in the {genre} category. Make it sound current and relevant."
+
     try:
-        response = model.generate_content(prompt)
+        response = gemini_model.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"❌ Error: {str(e)}"
 
-# Fetch and show news
-articles = fetch_news(GENRES[genre])
-
-if articles:
-    for i, article in enumerate(articles[:5]):  # limit to 5 articles
-        with st.expander(f"📰 {article['title']}"):
-            st.write(f"**Source**: {article.get('source', {}).get('name', 'N/A')}")
-            st.write(f"**Published At**: {article.get('publishedAt', 'N/A')}")
-            st.image(article.get("urlToImage"), width=500)
-            st.write(article.get("description", "No description available."))
-            
-            # AI summary modes
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button(f"🧠 Gemini Summary {i}"):
-                    with st.spinner("Thinking..."):
-                        summary = summarize_with_gemini(article.get("content", ""))
-                        st.success(summary)
-            with col2:
-                if st.button(f"👶 Explain Like I'm 5 {i}"):
-                    with st.spinner("Explaining..."):
-                        summary = summarize_with_gemini(article.get("content", ""), mode="eLI5")
-                        st.info(summary)
-else:
-    st.warning("No news found. Please try a different category or check API limits.")
+# ----------- Display News --------------
+if st.button("📡 Fetch News"):
+    with st.spinner("Fetching fresh news from Gemini..."):
+        result = generate_news(genre=genre, custom_query=user_query)
+        st.success("Here’s your AI-generated news update:")
+        st.write(result)
 
 st.markdown("---")
-st.caption("Made with ❤️ using NewsAPI + Gemini ✨")
-
+st.caption("✨ Powered by Gemini 2.0 Flash | No external news API used")
