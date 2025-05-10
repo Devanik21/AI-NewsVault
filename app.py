@@ -27,7 +27,7 @@ GENRES = [
 ]
 
 # -------------- App UI ------------------
-st.set_page_config(page_title="🗞️ AI News Generator", layout="wide")
+
 st.title("🗞️ AI News Generator")
 st.markdown("Generate the **latest news summaries** using real-time data from Gemini 2.0 Flash ✨")
 
