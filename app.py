@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import google.generativeai as genai
+from datetime import date
 
 # ---------------- Sidebar ----------------
 st.sidebar.title("🔑 API Keys")
@@ -31,7 +32,7 @@ GENRES = [
 ]
 
 # -------------- App UI ------------------
-st.title("🗞️ AI News Generator")
+st.title("🗕️ AI News Generator")
 st.markdown("Generate the **latest news summaries** using [NewsData.io](https://newsdata.io) and **Gemini 2.0 Flash** ✨")
 
 genre = st.selectbox("Choose a news category", GENRES)
@@ -43,12 +44,23 @@ st.markdown("---")
 def fetch_newsdata(genre):
     if not newsdata_key:
         return ["❌ NewsData.io API key not provided."]
-    
-    url = f"https://newsdata.io/api/1/news?apikey={newsdata_key}&country=us&category={genre.lower()}&language=en"
+
+    today = date.today().isoformat()  # Format: 'YYYY-MM-DD'
+    url = (
+        f"https://newsdata.io/api/1/news"
+        f"?apikey={newsdata_key}"
+        f"&country=us"
+        f"&category={genre.lower()}"
+        f"&language=en"
+        f"&pub_date={today}"
+    )
     try:
         response = requests.get(url)
         data = response.json()
-        return [article['title'] + ":\n" + article.get('description', '') for article in data.get('results', [])[:5]]
+        return [
+            article['title'] + ":\n" + article.get('description', '')
+            for article in data.get('results', [])[:5]
+        ]
     except Exception as e:
         return [f"❌ Error fetching news: {str(e)}"]
 
@@ -63,7 +75,7 @@ def summarize_with_gemini(text):
         return f"❌ Error summarizing with Gemini: {str(e)}"
 
 # ----------- Display News --------------
-if st.button("📡 Fetch News"):
+if st.button("📱 Fetch News"):
     with st.spinner("Fetching and summarizing news..."):
         if user_query:
             # Direct Gemini query
@@ -73,7 +85,7 @@ if st.button("📡 Fetch News"):
         else:
             news_list = fetch_newsdata(genre)
             for i, news in enumerate(news_list):
-                st.markdown(f"### 🗞️ Article {i+1}")
+                st.markdown(f"### 🗕️ Article {i+1}")
                 st.write(news)
                 summary = summarize_with_gemini(news)
                 st.markdown("**🧠 Summary:**")
