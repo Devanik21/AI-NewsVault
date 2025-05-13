@@ -1,10 +1,9 @@
 import streamlit as st
-import requests
 import google.generativeai as genai
 from datetime import date
 
 # ---------------- Sidebar ----------------
-st.sidebar.title("🔑 API Keys")
+st.sidebar.title("🔑 API Key")
 gemini_key = st.sidebar.text_input("Enter your Gemini API Key", type="password")
 
 # Initialize Gemini
@@ -13,9 +12,6 @@ if gemini_key:
     gemini_model = genai.GenerativeModel("gemini-2.0-flash")
 else:
     gemini_model = None
-
-# Load NewsData.io key from secrets
-newsdata_key = st.secrets.get("newsdata_api_key", None)
 
 # -------------- Genre Choices --------------
 GENRES = [
@@ -33,63 +29,33 @@ GENRES = [
 
 # -------------- App UI ------------------
 st.title("🗕️ AI News Generator")
-st.markdown("Generate the **latest news summaries** using [NewsData.io](https://newsdata.io) and **Gemini 2.0 Flash** ✨")
+st.markdown("Generate **news updates or summaries** using **Gemini 2.0 Flash** ✨")
 
 genre = st.selectbox("Choose a news category", GENRES)
 user_query = st.text_input("🧠 Want something specific? Ask your own query:")
 
 st.markdown("---")
 
-# -------------- NewsData Fetcher --------------
-def fetch_newsdata(genre):
-    if not newsdata_key:
-        return ["❌ NewsData.io API key not provided."]
-
-    today = date.today().isoformat()  # Format: 'YYYY-MM-DD'
-    url = (
-        f"https://newsdata.io/api/1/news"
-        f"?apikey={newsdata_key}"
-        f"&country=us"
-        f"&category={genre.lower()}"
-        f"&language=en"
-        f"&pub_date={today}"
-    )
-    try:
-        response = requests.get(url)
-        data = response.json()
-        return [
-            article['title'] + ":\n" + article.get('description', '')
-            for article in data.get('results', [])[:5]
-        ]
-    except Exception as e:
-        return [f"❌ Error fetching news: {str(e)}"]
-
-# -------------- Gemini Summarizer --------------
-def summarize_with_gemini(text):
+# -------------- Gemini Content Generator --------------
+def generate_news_summary(prompt):
     if not gemini_model:
         return "❌ Gemini API key not provided."
     try:
-        response = gemini_model.generate_content(f"Summarize the following news article:\n\n{text}")
+        response = gemini_model.generate_content(prompt)
         return response.text
     except Exception as e:
-        return f"❌ Error summarizing with Gemini: {str(e)}"
+        return f"❌ Error generating content with Gemini: {str(e)}"
 
-# ----------- Display News --------------
-if st.button("📱 Fetch News"):
-    with st.spinner("Fetching and summarizing news..."):
+# ----------- Display Content --------------
+if st.button("📱 Generate News"):
+    with st.spinner("Generating news content..."):
         if user_query:
-            # Direct Gemini query
-            result = summarize_with_gemini(user_query)
-            st.success("Here’s your AI-generated news update:")
-            st.write(result)
+            prompt = f"Please provide a detailed update or summary on the topic: {user_query}. Focus on today's developments ({date.today().isoformat()})."
         else:
-            news_list = fetch_newsdata(genre)
-            for i, news in enumerate(news_list):
-                st.markdown(f"### 🗕️ Article {i+1}")
-                st.write(news)
-                summary = summarize_with_gemini(news)
-                st.markdown("**🧠 Summary:**")
-                st.write(summary)
+            prompt = f"Provide a summary of the top {genre} news in the United States for today ({date.today().isoformat()})."
+        result = generate_news_summary(prompt)
+        st.success("Here’s your AI-generated news update:")
+        st.write(result)
 
 st.markdown("---")
-st.caption("✨ Powered by NewsData.io + Gemini 2.0 Flash")
+st.caption("✨ Powered by Gemini 2.0 Flash")
